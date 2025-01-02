@@ -299,17 +299,26 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
         IntPtr fogMemoryAllocation = FindUnusedSection(baseAddress - 0x10000, 1000, 10);
         if (fogMemoryAllocation == IntPtr.Zero) return;
 
-        IntPtr originalInstructionAddress = (nint)SigScan.FindPattern("88 86 ? ? 00 00 f2 0F 10 ? ? ? ? ? 8B", out _);
+        IntPtr originalInstructionAddress = (nint)SigScan.FindPattern("88 83 ? ? ? ? E8 ? ? ? ? 48 8B 48 08", out _);
         if (originalInstructionAddress == IntPtr.Zero)
         {
-            DebugWindow.LogError("Failed to find signature.");
+            DebugWindow.LogError("Failed to find signature #1");
             return;
         }
 
-        long jumpToNewCodeRelative = WriteFogPatch(fogMemoryAllocation, originalInstructionAddress, 0x180);
-        if (jumpToNewCodeRelative == 0) return;
+        long jumpToNewCodeRelative = WriteFogPatch(fogMemoryAllocation, originalInstructionAddress, 0x301C);
+        if (jumpToNewCodeRelative == 0)
+        {
+            DebugWindow.LogError("Failed to write fog patch #1");
+            return;
 
-        if (!WriteJumpToMemory(originalInstructionAddress, jumpToNewCodeRelative, 1, false)) return;
+        }
+
+        if (!WriteJumpToMemory(originalInstructionAddress, jumpToNewCodeRelative, 1, false))
+        {
+            DebugWindow.LogError("Failed to write jump to memory #1");
+            return;
+        }
     }
 
     private void ApplyFogPatch2()
@@ -327,17 +336,25 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
         IntPtr fogMemoryAllocation = FindUnusedSection(baseAddress - 0x10000, 1000, 10);
         if (fogMemoryAllocation == IntPtr.Zero) return;
 
-        IntPtr originalInstructionAddress = (nint)SigScan.FindPattern("88 8E 60 01 00 00", out _);
+        IntPtr originalInstructionAddress = (nint)SigScan.FindPattern("88 81 04 31 00 00", out _);
         if (originalInstructionAddress == IntPtr.Zero)
         {
-            DebugWindow.LogError("Failed to find signature.");
+            DebugWindow.LogError("Failed to find signature #2");
             return;
         }
 
-        long jumpToNewCodeRelative = WriteFogPatch(fogMemoryAllocation, originalInstructionAddress, 0x160);
-        if (jumpToNewCodeRelative == 0) return;
+        long jumpToNewCodeRelative = WriteFogPatch(fogMemoryAllocation, originalInstructionAddress, 0x3104);
+        if (jumpToNewCodeRelative == 0)
+        {
+            DebugWindow.LogError("Failed to write fog patch #2");
+            return;
+        }
 
-        if (!WriteJumpToMemory(originalInstructionAddress, jumpToNewCodeRelative, 1, false)) return;
+        if (!WriteJumpToMemory(originalInstructionAddress, jumpToNewCodeRelative, 1, false))
+        {
+            DebugWindow.LogError("Failed to write jump to memory #2");
+            return;
+        }
     }
 
     private long WriteFogPatch(IntPtr fogMemoryAllocation, IntPtr originalInstructionAddress, int memoryOffset)
@@ -347,7 +364,7 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
         Span<byte> newCode = stackalloc byte[16];
 
         newCode[0] = 0xC7;
-        newCode[1] = 0x86;
+        newCode[1] = 0x83;
 
         BitConverter.TryWriteBytes(newCode.Slice(2, 4), memoryOffset);
 
@@ -428,13 +445,13 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
     private void ApplyNoBlackBoxPatch(float blackKillValue)
     {
         /*
-            .text:0000000000CBFCA5                 ucomiss xmm0, dword ptr [rcx+264h]
-            .text:0000000000CBFCAC                 jnz     short loc_CBFCB7
-            .text:0000000000CBFCAE                 ucomiss xmm1, dword ptr [rcx+260h]
-            .text:0000000000CBFCB5                 jz      short locret_CBFCCC
-            .text:0000000000CBFCB7
-            .text:0000000000CBFCB7 loc_CBFCB7:                             ; CODE XREF: sub_CBFC90+1C↑j
-            .text:0000000000CBFCB7                 movss   dword ptr [rcx+260h], xmm1 
+            .text:0000000000CAFC95 0F 2E 81 64 02 00 00                    ucomiss xmm0, dword ptr [rcx+264h]
+            .text:0000000000CAFC9C 75 09                                   jnz     short loc_CAFCA7
+            .text:0000000000CAFC9E 0F 2E 89 60 02 00 00                    ucomiss xmm1, dword ptr [rcx+260h]
+            .text:0000000000CAFCA5 74 15                                   jz      short locret_CAFCBC
+            .text:0000000000CAFCA7
+            .text:0000000000CAFCA7                         loc_CAFCA7:                             ; CODE XREF: sub_CAFC80+1C↑j
+            .text:0000000000CAFCA7 F3 0F 11 89 60 02 00 00                 movss   dword ptr [rcx+260h], xmm1
         */
 
         IntPtr patchMemoryAllocation = FindUnusedSection(baseAddress - 0x10000, 1000, 10);
@@ -464,14 +481,14 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
         newCode[2] = 0x11;
         newCode[3] = 0x8F;
 
-        BitConverter.TryWriteBytes(newCode.Slice(4, 4), 0x00000450);
+        BitConverter.TryWriteBytes(newCode.Slice(4, 4), 0x000004B0);
 
         newCode[8] = 0xF3;
         newCode[9] = 0x0F;
         newCode[10] = 0x11;
         newCode[11] = 0x8F;
 
-        BitConverter.TryWriteBytes(newCode.Slice(12, 4), 0x00000448);
+        BitConverter.TryWriteBytes(newCode.Slice(12, 4), 0x000004A8);
 
         newCode[16] = 0xE9;
 
@@ -492,20 +509,23 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
     private void ApplyFastZoomPatch()
     {
         /*
-            .text:00000000000E67E9                 movss   dword ptr [rdi+450h], xmm1
-            .text:00000000000E67F1
-            .text:00000000000E67F1 loc_E67F1:                              ; CODE XREF: sub_E6610+1B0↑j
-            .text:00000000000E67F1                 mov     byte ptr [rsi], 1
-            .text:00000000000E67F4
-            .text:00000000000E67F4 loc_E67F4:                              ; CODE XREF: sub_E6610+192↑j
-            .text:00000000000E67F4                                         ; sub_E6610+196↑j ...
-            .text:00000000000E67F4                 mov     rbx, [rsp+78h+arg_0] 
+            .text:0000000000132100 F3 0F 11 8F B0 04 00 00                 movss   dword ptr [rdi+4B0h], xmm1
+            .text:0000000000132108 C6 06 01                                mov     byte ptr [rsi], 1
+            .text:000000000013210B
+            .text:000000000013210B                         loc_13210B:                             ; CODE XREF: sub_131F30+192↑j
+            .text:000000000013210B                                                                 ; sub_131F30+196↑j ...
+            .text:000000000013210B 48 8B 9C 24 80 00 00 00                 mov     rbx, [rsp+78h+arg_0]
+            .text:0000000000132113
+            .text:0000000000132113                         loc_132113:                             ; CODE XREF: sub_131F30+3E↑j
+            .text:0000000000132113                                                                 ; sub_131F30+4D↑j
+            .text:0000000000132113                                                                 ; DATA XREF: ...
+            .text:0000000000132113 48 8B BC 24 88 00 00 00                 mov     rdi, [rsp+78h+arg_8]
         */
 
         IntPtr patchMemoryAllocation = FindUnusedSection(baseAddress - 0x10000, 1000, 10);
         if (patchMemoryAllocation == IntPtr.Zero) return;
 
-        IntPtr originalInstructionAddress = (nint)SigScan.FindPattern("F3 0F 11 8F 50 04 00 00", out _);
+        IntPtr originalInstructionAddress = (nint)SigScan.FindPattern("F3 0F 11 8F ? ? ? ? C6 06 01 48 8B 9C 24 ? ? ? ?", out _);
         if (originalInstructionAddress == IntPtr.Zero)
         {
             DebugWindow.LogError("Failed to find signature.");
@@ -520,7 +540,7 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
 
     private long WriteIncrementalZoomPatch(IntPtr patchMemoryAllocation, IntPtr originalInstructionAddress, float value)
     {
-        if (!WriteValueToMemory(patchMemoryAllocation, 0.5f))
+        if (!WriteValueToMemory(patchMemoryAllocation, value))
         {
             DebugWindow.LogError("Failed to write zoom value.");
             return 0;
@@ -558,11 +578,9 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
     private void ApplyIncrementalZoomPatch()
     {
         /*
-            .text:00000000000E67CD                 mulss   xmm1, cs:dword_2DBAF00
-            .text:00000000000E67D5                 addss   xmm1, dword ptr [rdi+450h]
-            .text:00000000000E67DD                 maxss   xmm1, xmm0
-            .text:00000000000E67E1                 minss   xmm1, cs:Y
-            .text:00000000000E67E9                 movss   dword ptr [rdi+450h], xmm1
+            .text:00000000001320E4 F3 0F 59 0D 54 82 4E 02                 mulss   xmm1, cs:dword_261A340
+            .text:00000000001320EC F3 0F 58 8F B0 04 00 00                 addss   xmm1, dword ptr [rdi+4B0h]
+            .text:00000000001320F4 F3 0F 5F C8                             maxss   xmm1, xmm0
         */
 
         IntPtr patchMemoryAllocation = FindUnusedSection(baseAddress - 0x10000, 1000, 10);
@@ -790,30 +808,29 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
             ApplyZoomPatch();
         };
 
-        //Settings.EnableFastZoom.OnPressed = () =>
-        //{
-        //    InitializeProcess();
+        Settings.EnableFastZoom.OnPressed = () =>
+        {
+            InitializeProcess();
 
-        //    ApplyFastZoomPatch();
-        //    ApplyIncrementalZoomPatch();
-        //    ApplyNoSmoothPatch();
-        //};
+            ApplyIncrementalZoomPatch();
+            ApplyFastZoomPatch();
+        };
 
 
-        //Settings.EnableNoFog.OnPressed = () =>
-        //{
-        //    InitializeProcess();
+        Settings.EnableNoFog.OnPressed = () =>
+        {
+            InitializeProcess();
 
-        //    ApplyFogPatch1();
-        //    ApplyFogPatch2();
-        //};
+            ApplyFogPatch1();
+            ApplyFogPatch2();
+        };
 
-        //Settings.EnableNoBlackBox.OnPressed = () =>
-        //{
-        //    InitializeProcess();
+        Settings.EnableNoBlackBox.OnPressed = () =>
+        {
+            InitializeProcess();
 
-        //    ApplyNoBlackBoxPatch(20000.0f);
-        //};
+            ApplyNoBlackBoxPatch(20000.0f);
+        };
 
         Settings.EnableBrightness.OnPressed = () =>
         {
