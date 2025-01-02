@@ -855,13 +855,22 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
         if (!_isAdmin)
         {
             ImGui.Begin("Warning");
-            var windowRect = GameController.Window.GetWindowRectangleReal();
+            
             string msg = "You need to run the ExileCore2 as admin for WheresMyZoomAt to function.";
+
+            var windowRect = GameController.Window.GetWindowRectangleReal();
             ImGui.SetWindowPos(new Vector2(windowRect.Width / 2 - ImGui.CalcTextSize(msg).X / 2, windowRect.Height / 2 - ImGui.CalcTextSize(msg).Y / 2));
-            ImGui.SetWindowSize(new Vector2(ImGui.CalcTextSize(msg).X + 40, ImGui.CalcTextSize(msg).Y + 50));
+            ImGui.SetWindowSize(new Vector2(ImGui.CalcTextSize(msg).X + 30, ImGui.CalcTextSize(msg).Y + 70));
             ImGui.SetCursorPos(new Vector2(ImGui.GetWindowSize().X / 2 - ImGui.CalcTextSize(msg).X / 2, ImGui.GetWindowSize().Y / 2 - ImGui.CalcTextSize(msg).Y / 2));
 
             ImGui.Text(msg);
+
+            ImGui.SetCursorPos(new Vector2(ImGui.GetWindowSize().X / 2 - 50, ImGui.GetWindowSize().Y - 30));
+            if (ImGui.Button("Ignore"))
+            {
+                _isAdmin = true;
+            }
+
             ImGui.End();
         }
     }
