@@ -3,11 +3,15 @@ using System.Runtime.InteropServices;
 using System;
 using System.Numerics;
 using System.Linq;
+using System.Security.Principal;
+using ImGuiNET;
 
 namespace WheresMyZoomAt;
 
 public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
 {
+    private bool _isAdmin = false;
+
     const uint MEM_COMMIT = 0x1000;
     const uint MEM_RESERVE = 0x2000;
     const uint MEM_FREE = 0x00010000;
@@ -839,5 +843,26 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
             ApplyBrightnessPatch(10000.0f);
             ApplyBrightnessHeight();
         };
+
+        if (new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+        {
+            _isAdmin = true;
+        }
+    }
+
+    public override void Render()
+    {
+        if (!_isAdmin)
+        {
+            ImGui.Begin("Warning");
+            var windowRect = GameController.Window.GetWindowRectangleReal();
+            string msg = "You need to run the ExileCore2 as admin for WheresMyZoomAt to function.";
+            ImGui.SetWindowPos(new Vector2(windowRect.Width / 2 - ImGui.CalcTextSize(msg).X / 2, windowRect.Height / 2 - ImGui.CalcTextSize(msg).Y / 2));
+            ImGui.SetWindowSize(new Vector2(ImGui.CalcTextSize(msg).X + 40, ImGui.CalcTextSize(msg).Y + 50));
+            ImGui.SetCursorPos(new Vector2(ImGui.GetWindowSize().X / 2 - ImGui.CalcTextSize(msg).X / 2, ImGui.GetWindowSize().Y / 2 - ImGui.CalcTextSize(msg).Y / 2));
+
+            ImGui.Text(msg);
+            ImGui.End();
+        }
     }
 }
