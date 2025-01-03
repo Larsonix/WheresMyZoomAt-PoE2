@@ -833,7 +833,7 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
         {
             InitializeProcess();
 
-            ApplyNoBlackBoxPatch(20000.0f);
+            ApplyNoBlackBoxPatch(50000.0f);
         };
 
         Settings.EnableBrightness.OnPressed = () =>
