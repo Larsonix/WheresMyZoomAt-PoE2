@@ -1,14 +1,20 @@
-﻿using ExileCore2;
+using ExileCore2;
+using ExileCore2.Shared.Helpers;
+using ExileCore2.PoEMemory.Elements.AtlasElements;
+using GameOffsets2;
+
 using System.Runtime.InteropServices;
 using System;
 using System.Numerics;
 using System.Linq;
 using System.Security.Principal;
+
 using ImGuiNET;
-using ExileCore2.Shared.Helpers;
-using GameOffsets2;
+
 using System.Threading.Tasks;
 using System.Configuration;
+using static System.Windows.Forms.AxHost;
+using ExileCore2.PoEMemory.MemoryObjects;
 
 namespace WheresMyZoomAt;
 
@@ -59,6 +65,10 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
     IntPtr baseAllocation = IntPtr.Zero;
     nint processHandle = 0;
     SigScanSharp SigScan;
+
+    public GameController Game => GameController;
+    public IngameState State => Game.IngameState;
+    public AtlasPanel AtlasPanel => State.IngameUi.WorldMap.AtlasPanel;
 
     IntPtr FindNextFreeMemoryRegion(IntPtr startAddress, uint size)
     {
@@ -290,33 +300,29 @@ public class WheresMyZoomAt : BaseSettingsPlugin<WheresMyZoomAtSettings>
 
         if (!WriteMinssInstruction(zoomMemoryAllocation, zoomPatchAddress, patchAddress)) return;
     }
-
-    private async void ApplyAtlasPatch()
+    public override void Tick()
     {
         if (Settings.ZoomMenu.KeepAtlasZoom)
         {
-            var atlasAddress = GameController.IngameState.IngameUi.WorldMap.AtlasPanel.Address;
-            var scaleOffset = Extensions.GetOffset<ElementOffsets>(x => x.Scale);
-            var targetAddress = IntPtr.Add(new IntPtr(atlasAddress), scaleOffset);
-
-            var valueBytes = BitConverter.GetBytes(Settings.ZoomMenu.AtlasUnzoomValue.Value);
-
-            if (WriteProcessMemory(processHandle, targetAddress, valueBytes, (uint)valueBytes.Length, out _))
+            var atlasPanel = GameController?.IngameState?.IngameUi?.WorldMap?.AtlasPanel;
+            if (atlasPanel != null && atlasPanel.IsVisible)
             {
-                await Task.Delay(400);
-                ApplyAtlasPatch();
+                if (atlasPanel.Scale != Settings.ZoomMenu.AtlasUnzoomValue)
+                {
+                    ApplyAtlasPatch();
+                }
             }
         }
-        else
-        {
-            var atlasAddress = GameController.IngameState.IngameUi.WorldMap.AtlasPanel.Address;
-            var scaleOffset = Extensions.GetOffset<ElementOffsets>(x => x.Scale);
-            var targetAddress = IntPtr.Add(new IntPtr(atlasAddress), scaleOffset);
+    }
+    private void ApplyAtlasPatch()
+    {
+         var atlasAddress = GameController.IngameState.IngameUi.WorldMap.AtlasPanel.Address;
+         var scaleOffset = Extensions.GetOffset<ElementOffsets>(x => x.Scale);
+         var targetAddress = IntPtr.Add(new IntPtr(atlasAddress), scaleOffset);
 
-            var valueBytes = BitConverter.GetBytes(Settings.ZoomMenu.AtlasUnzoomValue.Value);
+         var valueBytes = BitConverter.GetBytes(Settings.ZoomMenu.AtlasUnzoomValue.Value);
 
-            WriteProcessMemory(processHandle, targetAddress, valueBytes, (uint)valueBytes.Length, out _);
-        }
+         WriteProcessMemory(processHandle, targetAddress, valueBytes, (uint)valueBytes.Length, out _);
     }
 
     // Helper function to write bytes to memory
